@@ -3,7 +3,7 @@
 /* ====== PENGATURAN BAWAAN (boleh diubah) ====== */
 const DEFAULT_SERVER='https://slsk-id-default-rtdb.asia-southeast1.firebasedatabase.app';
 const LS='rf_absensi_v1',LC='rf_conn_v1',LT='rf_theme_v1',LSS='rf_sess_v1';
-const COLS=['cfg','adm','att','lv','sp','msg','ntf','pt','log','mk'];
+const COLS=['cfg','adm','att','lv','sp','msg','ntf','pt','log','mk','cr'];
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const pad=n=>String(n).padStart(2,'0');
 const dstr=(d=new Date())=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
@@ -242,7 +242,7 @@ actions.serverSave=async()=>{conn.url=$('#srv').value.trim().replace(/\/+$/,'');
  if(conn.url){booting=true;render();await sync();booting=false;toast(syncSt.ok?'Tersambung ke server':'Gagal tersambung: '+syncSt.msg,syncSt.ok?'ok':'bad')}else toast('Mode lokal aktif','ok');render()};
 
 /* ====== RENDER ====== */
-const TABS={admin:[['home','Beranda'],['izin','Izin'],['hist','Riwayat'],['poin','Poin'],['pesan','Pesan']],owner:[['dash','Dasbor'],['rekap','Rekap'],['adm','Admin'],['kirim','Kirim'],['log','Log'],['set','Setelan']]};
+const TABS={admin:[['home','Beranda'],['izin','Izin'],['hist','Riwayat'],['poin','Poin'],['pesan','Pesan']],owner:[['dash','Dasbor'],['rekap','Rekap'],['kal','Kal'],['adm','Admin'],['kirim','Kirim'],['top','Top'],['log','Log'],['set','Setelan']]};
 const unreadOf=id=>Object.values(S.ntf).filter(n=>n.to===id&&!n.read);
 function render(){
  pendingRender=false;const root=$('#app');
@@ -545,16 +545,16 @@ actions.entryCancel=el=>arm(el,()=>{const kind=el.dataset.kind,id=el.dataset.id,
 
 /* ====== OWNER: ADMIN ====== */
 ownerV.adm=function(){
- const ym=dstr().slice(0,7),A=adminsAll();
+ const ym=dstr().slice(0,7),A=admFiltered();
  let h=`<div class="card"><h3 class="sec" style="margin-top:0">Tambah admin</h3>
  <div class="fld"><label for="anm">Nama admin</label><input id="anm" maxlength="40"></div>
  <div class="row2"><div class="fld"><label for="atg">ID Telegram (opsional)</label><input id="atg" inputmode="numeric" placeholder="untuk pesan pribadi"></div><div class="fld"><label for="awa">No. WhatsApp (opsional)</label><input id="awa" inputmode="tel" placeholder="62812..."></div></div>
- <button class="btn p block" type="button" data-act="admAdd">Tambah dan buat kunci</button></div><h3 class="sec">Daftar admin (${A.length})</h3>`;
+ <button class="btn p block" type="button" data-act="admAdd">Tambah dan buat kunci</button></div><h3 class="sec">Daftar admin (${A.length})</h3><div class="row2"><div class="fld"><input id="aq" data-ch="admQ" placeholder="Cari nama / username" value="${esc(admQ)}"></div><div class="fld"><select id="af" data-ch="admF">${[['','Semua (tanpa arsip)'],['aktif','Aktif'],['nonaktif','Nonaktif'],['cuti','Cuti'],['keluar','Arsip (keluar)']].map(x=>`<option value="${x[0]}" ${x[0]===admF?'selected':''}>${x[1]}</option>`).join('')}</select></div></div>`;
  if(!A.length)return h+'<p class="empty">Belum ada admin.</p>';
  h+=A.map(a=>{const lg=Object.values(S.log).filter(l=>l.who===a.name&&l.act==='Login').sort((x,y)=>y.ts-x.ts)[0];
   return `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b style="font-size:17px;overflow-wrap:anywhere">${esc(a.name)}</b>${isActive(a)?'<span class="chip ok">Aktif</span>':'<span class="chip mu">Nonaktif</span>'}</div>
   <p class="mut" style="margin:4px 0 10px">Poin bulan ini: ${ptsRange(a.id,d=>d.startsWith(ym))} · Login terakhir: ${lg?fmtTs(lg.ts):'belum pernah'}<br>Telegram: ${a.tg?esc(a.tg):'-'} · WA: ${a.wa?esc(a.wa):'-'}<br>Username: ${esc(a.un||'-')} · Bergabung: ${fmtD(a.cd,true)} · Status: ${esc(a.status||'aktif')} · Role: ${a.role==='owner'?'Owner':'Admin'}<br>Kunci: <b>${esc(a.k||'(belum tersimpan, ketuk Reset kunci)')}</b></p>
-  <div class="btns" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn g sm" type="button" data-act="admEdit" data-id="${a.id}">Edit</button><button class="btn g sm" type="button" data-act="admReset" data-id="${a.id}">Reset kunci</button><button class="btn g sm" type="button" data-act="admToggle" data-id="${a.id}">${isActive(a)?'Nonaktifkan':'Aktifkan'}</button><button class="btn d sm" type="button" data-act="admStat" data-id="${a.id}">Reset statistik</button><button class="btn d sm" type="button" data-act="admDel" data-id="${a.id}">Hapus</button></div></div>`}).join('');
+  <div class="btns" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn g sm" type="button" data-act="admEdit" data-id="${a.id}">Edit</button><button class="btn g sm" type="button" data-act="admReset" data-id="${a.id}">Reset kunci</button><button class="btn g sm" type="button" data-act="admToggle" data-id="${a.id}">${isActive(a)?'Nonaktifkan':'Aktifkan'}</button><button class="btn g sm" type="button" data-act="admProf" data-id="${a.id}">Profil</button><button class="btn d sm" type="button" data-act="admStat" data-id="${a.id}">Reset statistik</button><button class="btn d sm" type="button" data-act="admDel" data-id="${a.id}">Hapus</button></div></div>`}).join('');
  return h};
 function keySheet(a,key){
  const base=/^https?:/.test(location.protocol)?location.href.split('#')[0]:'';
@@ -569,6 +569,7 @@ actions.admAdd=async()=>{
  put('adm',rec);logAct('Owner','owner','Menambah admin '+name);render();keySheet(rec,key)};
 actions.admReset=el=>arm(el,async()=>{const a=S.adm[el.dataset.id];if(!a)return;const key=genKey();a.h=(await hashes(key))[0];a.k=key;put('adm',a);logAct('Owner','owner','Reset kunci '+a.name);keySheet(a,key)});
 actions.admToggle=el=>{const a=S.adm[el.dataset.id];if(!a)return;const td=dstr();
+ if(isActive(a)&&!el.dataset.ok){sheet('Nonaktifkan akun',`<div class="alert warn"><b>Nonaktifkan akun ${esc(a.name)}?</b><br>Admin akan langsung keluar dan melihat peringatan saat mencoba masuk.</div><div class="stack"><button class="btn d block" type="button" data-act="admOff" data-id="${a.id}">Ya, nonaktifkan</button><button class="btn g block" type="button" data-act="closeSheet">Batal</button></div>`);return}
  if(isActive(a)){a.off=[...(a.off||[]),[td,null]];logAct('Owner','owner','Menonaktifkan '+a.name)}
  else{a.off=(a.off||[]).map(p=>p[1]?p:[p[0],td]);logAct('Owner','owner','Mengaktifkan '+a.name)}
  a.status=isActive(a)?'aktif':'nonaktif';put('adm',a);render()};
@@ -723,6 +724,71 @@ let obOff=false;
 function onboard(){const a=me(),s=Math.min(a.obs||0,OB.length-1),last=s===OB.length-1;sheet('Panduan '+(s+1)+'/'+OB.length,`<h3 style="margin-bottom:6px">${OB[s][0]}</h3><p style="margin-bottom:14px">${OB[s][1]}</p><div class="stack"><button class="btn p block" type="button" data-act="obNext">${last?'Selesai':'Lanjut'}</button><button class="btn g block" type="button" data-act="obLater">Nanti saja</button></div>`)}
 actions.obNext=()=>{const a=me();a.obs=(a.obs||0)+1;if(a.obs>=OB.length)a.ob=true;put('adm',a);closeSheet();if(!a.ob)setTimeout(onboard,200)};
 actions.obLater=()=>{obOff=true;closeSheet()};
+
+
+/* ====== TAMBAHAN 2: kalender, koreksi, banding, profil, peringkat ====== */
+actions.admOff=el=>{closeSheet();actions.admToggle({dataset:{id:el.dataset.id,ok:1}});toast('Akun dinonaktifkan','ok')};
+let admQ='',admF='';
+function admFiltered(){const q=admQ.toLowerCase();return adminsAll().filter(a=>{const s=a.status||(isActive(a)?'aktif':'nonaktif');if(admF?s!==admF:s==='keluar')return false;return !q||a.name.toLowerCase().includes(q)||(a.un||'').toLowerCase().includes(q)})}
+changes.admQ=el=>{admQ=el.value;render()};changes.admF=el=>{admF=el.value;render()};changes.calA=el=>{cal.aid=el.value;render()};
+actions.admProf=el=>{const a=S.adm[el.dataset.id];if(!a)return;const st=allStats(a.id),sp=Object.values(S.sp).filter(s=>s.aid===a.id);let streak=0;
+ for(let d=dstr();d>=a.cd;d=addDays(d,-1)){const x=dayStatus(a.id,d).st;if(x==='sensus')streak++;else if(d===dstr()&&x==='belum')continue;else break}
+ sheet('Profil '+a.name,`<p class="mut" style="margin-bottom:10px">Username: ${esc(a.un||'-')} · Bergabung: ${fmtD(a.cd,true)} · Status: ${esc(a.status||'aktif')}</p><h3 class="sec" style="margin-top:0">Pelanggaran</h3><p>Alpa: ${st.a} · Terlambat: ${st.l}<br>SP: ${sp.length?sp.map(s=>esc(s.lvl)+' ('+fmtD(s.date,true)+(s.x?', dicabut':'')+')').join(', '):'tidak ada'}</p><h3 class="sec">Pencapaian</h3><p>Total sensus: ${st.s} · Total poin: ${st.p}<br>Absen beruntun: ${streak} hari</p>`)};
+/* peringkat */
+function lbHtml(selfId){const ym=dstr().slice(0,7),L=adminsActive().map(a=>({a,m:ptsRange(a.id,d=>d.startsWith(ym)),t:ptsRange(a.id,()=>true)})).sort((x,y)=>y.t-x.t);
+ return `<h3 class="sec">Leaderboard</h3>`+(L.length?`<div class="card list">${L.map((x,n)=>`<div class="li"><div class="rd"><b>${n+1}</b></div><div class="lb"><b>${esc(x.a.name)}${x.a.id===selfId?' (kamu)':''}</b><span class="mut">Bulan ini ${x.m}</span></div><div class="rp">${x.t}</div></div>`).join('')}</div>`:'<p class="empty">Belum ada data.</p>')}
+ownerV.top=()=>lbHtml('');
+/* kalender */
+let cal={ym:dstr().slice(0,7),aid:''};
+const isHol=d=>!!(cfg().hol||{})[d];
+const tally=(ds,ids)=>{let s=0,t=0;ids.forEach(id=>{const x=dayStatus(id,ds).st;if(x==='sensus'){s++;t++}else if(x==='izin'||x==='alpa')t++});return [s,t]};
+function calRate(ym,aid){const ids=aid?[aid]:adminsActive().map(a=>a.id),td=dstr();let s=0,t=0;for(let d=1;d<=daysIn(ym);d++){const ds=ym+'-'+pad(d);if(ds>td||isHol(ds))continue;const r=tally(ds,ids);s+=r[0];t+=r[1]}return t?Math.round(s/t*100):null}
+actions.calPrev=()=>{cal.ym=addMonths(cal.ym,-1);render()};actions.calNext=()=>{cal.ym=addMonths(cal.ym,1);render()};
+function calView(self){
+ const aid=self?me().id:cal.aid,ym=cal.ym,td=dstr(),first=pd(ym+'-01').getDay(),cur=calRate(ym,aid),prv=calRate(addMonths(ym,-1),aid);
+ let c=HARI.map(h=>`<div class="mut" style="text-align:center;font-size:11px">${h.slice(0,1)}</div>`).join('')+'<div></div>'.repeat(first);
+ for(let d=1;d<=daysIn(ym);d++){const ds=ym+'-'+pad(d);let bg='var(--surf2)',fg='var(--muted)';
+  if(isHol(ds)){bg='var(--line)';fg='var(--ink)'}
+  else if(ds<=td){if(aid){const x=dayStatus(aid,ds);if(x.st==='sensus'){bg=x.late?'var(--late-bg)':'var(--ok-bg)';fg=x.late?'var(--late)':'var(--ok)'}else if(x.st==='izin'){bg='var(--izin-bg)';fg='var(--izin)'}else if(x.st==='alpa'){bg='var(--bad-bg)';fg='var(--bad)'}}
+   else{const r=tally(ds,adminsActive().map(a=>a.id));if(r[1]){const q=r[0]/r[1]*100;bg=q>=80?'var(--ok-bg)':q>=50?'var(--late-bg)':'var(--bad-bg)';fg=q>=80?'var(--ok)':q>=50?'var(--late)':'var(--bad)'}}}
+  c+=`<button type="button" data-act="calDay" data-d="${ds}" style="border:0;border-radius:8px;min-height:40px;font-weight:600;background:${bg};color:${fg};${ds===td?'outline:2px solid var(--orange);':''}">${d}</button>`}
+ const df=cur!=null&&prv!=null?cur-prv:null;
+ return nav(ym,'cal')+`<div class="card"><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${c}</div>
+ <div class="leg"><span><i style="background:var(--ok-bg)"></i>Sensus</span><span><i style="background:var(--izin-bg)"></i>Izin</span><span><i style="background:var(--late-bg)"></i>Terlambat</span><span><i style="background:var(--bad-bg)"></i>Bolos</span><span><i style="background:var(--line)"></i>Libur</span></div>
+ <p class="mut" style="margin-top:8px">Kehadiran ${fmtM(ym)}: <b>${cur==null?'-':cur+'%'}</b> · bulan sebelumnya: <b>${prv==null?'-':prv+'%'}</b>${df==null?'':' ('+(df>=0?'+':'')+df+' poin persen)'}</p></div>`}
+ownerV.kal=function(){const A=adminsAll();return `<div class="fld"><label for="calA">Admin</label><select id="calA" data-ch="calA"><option value="">Semua admin</option>${A.map(a=>`<option value="${a.id}" ${a.id===cal.aid?'selected':''}>${esc(a.name)}</option>`).join('')}</select></div>`+calView(false)+'<p class="mut">Ketuk tanggal untuk melihat detail dan menandai hari libur.</p>'};
+actions.calDay=el=>{const d=el.dataset.d,ids=sess.role==='owner'?adminsActive():[me()];
+ sheet(fmtD(d),(isHol(d)?'<p class="chip mu" style="margin-bottom:8px">Hari libur / tanpa sensus</p>':'')+(ids.length?`<div class="card list">${ids.filter(a=>cal.aid&&sess.role==='owner'?a.id===cal.aid:true).map(a=>{const x=dayStatus(a.id,d);return `<div class="li"><div class="lb"><b>${esc(a.name)}</b><span class="mut">${esc(x.st==='sensus'?x.rec.time+' · '+detail(x):detail(x))||'&nbsp;'}</span></div>${stChip(x)}</div>`}).join('')}</div>`:'')+(sess.role==='owner'?`<button class="btn g block" type="button" data-act="calHol" data-d="${d}">${isHol(d)?'Hapus tanda libur':'Tandai hari libur'}</button>`:''))};
+actions.calHol=el=>{const h=Object.assign({},cfg().hol||{});if(h[el.dataset.d])delete h[el.dataset.d];else h[el.dataset.d]=true;setCfg({hol:h});closeSheet();render()};
+const _hist=adminV.hist;adminV.hist=function(){return _hist()+'<h3 class="sec">Kalender</h3>'+calView(true)};
+/* koreksi & banding */
+const crChip=r=>r.status==='pending'?'<span class="chip late">Menunggu</span>':r.status==='ok'?'<span class="chip ok">Disetujui</span>':'<span class="chip bad">Ditolak</span>';
+const _iz=adminV.izin;adminV.izin=function(){const a=me(),L=Object.values(S.cr).filter(r=>r.aid===a.id&&r.type==='koreksi').sort((x,y)=>y.ts-x.ts).slice(0,8);
+ return _iz()+`<h3 class="sec">Koreksi absen</h3><div class="card"><div class="fld"><label for="crD">Tanggal</label><input id="crD" type="date" max="${dstr()}" value="${dstr()}"></div><div class="row2"><div class="fld"><label for="crK">Jenis</label><select id="crK"><option value="lupa">Lupa absen</option><option value="salah">Salah menekan tombol</option></select></div><div class="fld"><label for="crT">Jam (bila lupa)</label><input id="crT" type="time" value="${tstr()}"></div></div><div class="fld"><label for="crR">Alasan (wajib)</label><textarea id="crR" rows="2" maxlength="300"></textarea></div><div class="fld"><label for="crF">Bukti (opsional)</label><input id="crF" type="file" accept="image/*"></div><button class="btn n block" type="button" data-act="crSend">Ajukan koreksi</button></div>`+(L.length?`<div class="card list">${L.map(r=>`<div class="li"><div class="lb"><b>${fmtD(r.date,true)} · ${r.kind==='lupa'?'Lupa absen':'Salah tekan'}</b><span class="mut">${esc(r.reason)}${r.dec&&r.dec.reason?' · Owner: '+esc(r.dec.reason):''}</span></div>${crChip(r)}</div>`).join('')}</div>`:'')};
+actions.crSend=async()=>{const a=me(),date=$('#crD').value,kind=$('#crK').value,r=$('#crR').value.trim(),f=$('#crF').files[0];
+ if(!date||date>dstr()){toast('Tanggal tidak valid','bad');return}if(r.length<3){toast('Alasan wajib diisi','bad');return}
+ if(kind==='salah'&&!Object.values(S.att).some(x=>x.aid===a.id&&x.date===date&&!x.x)){toast('Tidak ada absen di tanggal itu','bad');return}
+ const doc=f?await imgData(f):'';put('cr',{id:uid('c'),type:'koreksi',aid:a.id,date,kind,time:$('#crT').value||tstr(),reason:r,doc,before:stText(dayStatus(a.id,date)),status:'pending',ts:Date.now()});
+ ntf('owner','Koreksi absen: '+a.name,fmtD(date,true)+' · '+r,'info');logAct(a.name,'admin','Ajukan koreksi absen '+date);toast('Koreksi diajukan, menunggu Owner','ok');render()};
+const _ps=adminV.pesan;adminV.pesan=function(){const a=me(),SP=Object.values(S.sp).filter(s=>s.aid===a.id&&!s.x);let h=_ps();if(!SP.length)return h;
+ const ap=id=>Object.values(S.cr).find(r=>r.type==='banding'&&r.spid===id);
+ return h+`<h3 class="sec">Banding SP</h3><div class="card list">${SP.map(s=>{const r=ap(s.id);return `<div class="li"><div class="lb"><b>${esc(s.lvl)} · ${fmtD(s.date,true)}</b>${r&&r.dec?`<span class="mut">Keputusan: ${esc(r.dec.v)}${r.dec.reason?' · '+esc(r.dec.reason):''}</span>`:''}</div>${r?crChip(r):`<button class="btn g sm" type="button" data-act="spApp" data-id="${s.id}">Ajukan banding</button>`}</div>`}).join('')}</div>`};
+actions.spApp=el=>sheet('Banding SP',`<div class="fld"><label for="apR">Alasan banding (wajib)</label><textarea id="apR" rows="3" maxlength="400"></textarea></div><div class="fld"><label for="apF">Bukti (opsional)</label><input id="apF" type="file" accept="image/*"></div><button class="btn p block" type="button" data-act="apSend" data-id="${el.dataset.id}">Kirim banding</button>`);
+actions.apSend=async el=>{const a=me(),s=S.sp[el.dataset.id],r=$('#apR').value.trim(),f=$('#apF').files[0];if(!s)return;if(r.length<3){toast('Alasan wajib diisi','bad');return}
+ const doc=f?await imgData(f):'';put('cr',{id:uid('c'),type:'banding',aid:a.id,spid:s.id,date:s.date,reason:r,doc,before:s.lvl+': '+s.reason,status:'pending',ts:Date.now()});
+ ntf('owner','Banding '+s.lvl+': '+a.name,r,'info');logAct(a.name,'admin','Banding '+s.lvl);closeSheet();toast('Banding terkirim','ok');render()};
+function crPanel(){const P=Object.values(S.cr).filter(r=>r.status==='pending').sort((x,y)=>x.ts-y.ts),H=Object.values(S.cr).filter(r=>r.status!=='pending'&&r.dec).sort((x,y)=>y.dec.ts-x.dec.ts).slice(0,5);
+ if(!P.length&&!H.length)return '';
+ return `<h3 class="sec">Permintaan admin</h3><div class="card list">${P.concat(H).map(r=>`<div class="li"><div class="lb"><b>${esc((S.adm[r.aid]||{}).name||'?')} · ${r.type==='banding'?'Banding SP':'Koreksi absen'}</b><span class="mut">${esc(r.reason)}</span></div>${r.status==='pending'?`<button class="btn n sm" type="button" data-act="crOpen" data-id="${r.id}">Tinjau</button>`:crChip(r)}</div>`).join('')}</div>`}
+const _dash=ownerV.dash;ownerV.dash=function(){return crPanel()+_dash()};
+actions.crOpen=el=>{const r=S.cr[el.dataset.id];if(!r)return;const after=r.type==='banding'?'Keputusan akhir dicatat Owner (SP lama tetap tersimpan)':r.kind==='lupa'?'Sensus jam '+r.time:'Absen dibatalkan (jejak tetap tersimpan)';
+ sheet(r.type==='banding'?'Banding SP':'Koreksi absen',`<p class="mut">${esc((S.adm[r.aid]||{}).name||'?')} · ${fmtD(r.date,true)}</p><p><b>Sebelum:</b> ${esc(r.before)}<br><b>Sesudah:</b> ${esc(after)}<br><b>Alasan:</b> ${esc(r.reason)}</p>${r.doc?`<img src="${esc(r.doc)}" alt="Bukti" style="width:100%;border-radius:10px;margin:10px 0">`:''}<div class="fld"><label for="crDR">Alasan keputusan</label><textarea id="crDR" rows="2" maxlength="300"></textarea></div><div class="row2"><button class="btn p" type="button" data-act="crDecide" data-id="${r.id}" data-v="ok">${r.type==='banding'?'Terima':'Setujui'}</button><button class="btn d" type="button" data-act="crDecide" data-id="${r.id}" data-v="no">Tolak</button></div>`)};
+actions.crDecide=el=>{const r=S.cr[el.dataset.id];if(!r||r.status!=='pending')return;const ok=el.dataset.v==='ok',reason=$('#crDR').value.trim();
+ if(ok&&r.type==='koreksi'){if(r.kind==='lupa'){if(dayStatus(r.aid,r.date).st==='sensus'){toast('Sudah ada absen di tanggal itu','bad');return}
+   put('att',{id:uid('s'),aid:r.aid,date:r.date,time:r.time,ts:pd(r.date).getTime()+mins(r.time)*6e4,k:'sensus',late:mins(r.time)>mins(cfg().lateT),j:{foto:false,pcc:false,sf:false},jml:'',note:'Koreksi',pts:0,by:'koreksi',cr:r.id});r.after='Sensus '+r.time}
+  else{Object.values(S.att).filter(x=>x.aid===r.aid&&x.date===r.date&&!x.x).forEach(x=>{x.x=true;x.xb='koreksi';put('att',x)});r.after='Absen dibatalkan'}}
+ r.status=ok?'ok':'no';r.dec={v:r.type==='banding'?(ok?'Diterima':'Ditolak'):(ok?'Disetujui':'Ditolak'),reason,ts:Date.now()};put('cr',r);
+ ntf(r.aid,(r.type==='banding'?'Banding ':'Koreksi ')+(ok?'disetujui':'ditolak'),reason||'Tanpa catatan','info');logAct('Owner','owner',(ok?'Menyetujui ':'Menolak ')+r.type+' '+(S.adm[r.aid]||{}).name);closeSheet();toast('Keputusan tersimpan','ok');render()};
 
 boot();
 })();
